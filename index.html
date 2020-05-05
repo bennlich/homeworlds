@@ -7,13 +7,15 @@
 </head>
 <body>
   <div class="main-container">
-    <div class="debug-state"></div>
-    <button onclick="clearState()">Clear</button>
-    <button onclick="addSet()">Add Set</button>
+    <div class="buttons">
+      <button onclick="clearState()">Clear</button>
+      <button onclick="addSet()">Add Set</button>
+    </div>
   </div>
+  <div class="debug-state"></div>
   <canvas id="myCanvas" resize></canvas>
   <script src="lib/underscore.js"></script>
   <script src="lib/paper-full.min.js"></script>
-  <script src="main.js"></script>
+  <script src="main.js" type="module"></script>
 </body>
 </html>

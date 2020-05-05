@@ -1,57 +1,12 @@
-class SharedState {
-  constructor({ serverUrl }) {
-    this.state = {};
-    this.changeCallbacks = [];
-    this.removeCallbacks = [];
+import { SharedState } from './src/SharedState.js';
+import config from './config.js';
 
-    this.socket = new WebSocket(serverUrl);
-    this.socket.onopen = () => {
-      console.log('socket open');
-    };
-    this.socket.onmessage = (e) => {
-      let data = JSON.parse(e.data);
-      if (data.type === 'init') {
-        this.state = data.state;
-        this.emitChange();
-      }
-      if (data.type === 'set') {
-        this.state[data.key] = data.value;
-        this.emitChange();
-      }
-      if (data.type === 'delete') {
-        delete this.state[data.key];
-        this.emitRemove(data.key);
-      }
-    };
-  }
-  onChange(fn) {
-    this.changeCallbacks.push(fn);
-  }
-  emitChange() {
-    this.changeCallbacks.forEach((fn) => fn(this.state));
-  }
-  onRemove(fn) {
-    this.removeCallbacks.push(fn);
-  }
-  emitRemove(key) {
-    this.removeCallbacks.forEach((fn) => fn(key));
-  }
-  set(key, value) {
-    this.state[key] = value;
-    this.socket.send(JSON.stringify({ type: 'set', key, value }));
-  }
-  delete(key) {
-    delete this.state[key];
-    this.socket.send(JSON.stringify({ type: 'delete', key }));
-  }
-}
-
-let homeworldsState = new SharedState({ serverUrl: 'ws://localhost:8787' });
+let homeworldsState = new SharedState({ serverUrl: config.socketUrl });
 homeworldsState.onChange(render);
 homeworldsState.onRemove((key) => {
   viewState[key].remove();
   delete viewState[key];
-  render(homeworldsState.state);
+  render();
 });
 
 let viewState = {};
@@ -73,62 +28,70 @@ function addSet() {
       nextId += 1;
     }
   }
-  render(homeworldsState.state);
+  render();
 }
 
 function clearState() {
   Object.keys(homeworldsState.state).forEach((key) => homeworldsState.delete(key));
   viewState = {};
   paper.project.clear();
-  render(homeworldsState.state);
+  render();
 }
 
-function render(state) {
-  document.querySelector('.debug-state').innerHTML = JSON.stringify(state);
+function render() {
+  let state = homeworldsState.state;
+  document.querySelector('.debug-state').innerHTML = JSON.stringify(state, null, 2);
   Object.keys(state).forEach((id) => {
-    let item = viewState[id];
-    if (!item) {
-      viewState[id] = createItem(id, state[id]);
-    } else {
-      viewState[id] = updateItem(viewState[id], state[id]);
+    if (viewState[id]) {
+      viewState[id].remove();
     }
+    viewState[id] = getShape(state[id]);
   });
   paper.view.draw();
 }
 
-function createItem(id, newState) {
+function getShape(newState) {
+  let getRadius = (size) => {
+    if (size === 'small') return 30;
+    if (size === 'medium') return 40;
+    if (size === 'large') return 50;
+  };
+  
+  let shape;
   if (newState.type === 'supply') {
-    let getRadius = (size) => {
-      if (size === 'small') return 30;
-      if (size === 'medium') return 40;
-      if (size === 'large') return 50;
-    };
-
-    let piece = new paper.Path.RegularPolygon({
-      center: new paper.Point(newState.x, newState.y),
+    shape = new paper.Path.RegularPolygon({
+      center: new paper.Point(0, 0),
       sides: 3,
       radius: getRadius(newState.size),
       fillColor: newState.color
     });
-
-    piece.onMouseDrag = (event) => {
-      piece.position = piece.position.add(event.delta);
-      homeworldsState.set(id, _.extend(homeworldsState.state[id], { x: piece.position.x, y: piece.position.y }));
-      paper.view.draw();
-    }
-
-    return piece;
   }
-}
-
-function updateItem(item, newState) {
-  item.position.x = newState.x;
-  item.position.y = newState.y;
-  return item;
+  shape.position.x = newState.x;
+  shape.position.y = newState.y;
+  return shape;
 }
 
 let canvas = document.getElementById('myCanvas');
 paper.setup(canvas);
+
+let selectedItemId = null;
+paper.view.onMouseDown = (event) => {
+  let hit = paper.project.hitTest(event.point);
+  if (!hit)
+    return;
+  selectedItemId = Object.keys(viewState)[Object.values(viewState).indexOf(hit.item)]
+}
+paper.view.onMouseMove = (event) => {
+  if (!selectedItemId)
+    return;
+  let item = viewState[selectedItemId];
+  let { x, y } = item.position.add(event.delta);
+  homeworldsState.set(selectedItemId, _.extend(homeworldsState.state[selectedItemId], { x, y }));
+  render();
+}
+paper.view.onMouseUp = (event) => {
+  selectedItemId = null;
+}
 
 // Create a triangle shaped path 
 // var triangle = new paper.Path.RegularPolygon({
@@ -156,3 +119,6 @@ paper.setup(canvas);
 // tool.onMouseDrag = function(event) {
 //   path.add(event.point);
 // }
+
+window.clearState = clearState;
+window.addSet = addSet;
