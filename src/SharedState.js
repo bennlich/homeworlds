@@ -36,9 +36,20 @@ class SharedState {
   emitRemove(key) {
     this.removeCallbacks.forEach((fn) => fn(key));
   }
+  get(key) {
+    return this.state[key];
+  }
   set(key, value) {
     this.state[key] = value;
     this.socket.send(JSON.stringify({ type: 'set', key, value }));
+  }
+  update(key, value) {
+    for (let attrKey in value) {
+      if (value.hasOwnProperty(attrKey)) {
+        this.state[key][attrKey] = value[attrKey];
+      }
+    }
+    this.socket.send(JSON.stringify({ type: 'set', key, value: this.state[key] }));
   }
   delete(key) {
     delete this.state[key];

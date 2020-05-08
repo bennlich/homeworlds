@@ -9,7 +9,20 @@ homeworldsState.onRemove((key) => {
   render();
 });
 
+// references to paper.js objects keyed by global id
 let viewState = {};
+let getItemId = (item) => {
+  return Object.keys(viewState)[Object.values(viewState).indexOf(item)]
+};
+let pieceTypes = () => {
+  return [
+    'supply', 'star', 'ship'
+  ];
+};
+let nextType = (type) => {
+  let types = pieceTypes();
+  return types[(types.indexOf(type) + 1) % 3];
+}
 
 function addSet() {
   let sizes = ['small', 'medium', 'large'];
@@ -66,6 +79,22 @@ function getShape(newState) {
       fillColor: newState.color
     });
   }
+  if (newState.type === 'star') {
+    shape = new paper.Path.Rectangle({
+      center: new paper.Point(0, 0),
+      size: 2 * getRadius(newState.size),
+      fillColor: newState.color
+    });
+  }
+  if (newState.type === 'ship') {
+    shape = new paper.Path.RegularPolygon({
+      center: new paper.Point(0, 0),
+      sides: 3,
+      radius: getRadius(newState.size),
+      fillColor: newState.color
+    });
+    shape.rotate(45);
+  }
   shape.position.x = newState.x;
   shape.position.y = newState.y;
   return shape;
@@ -75,22 +104,39 @@ let canvas = document.getElementById('myCanvas');
 paper.setup(canvas);
 
 let selectedItemId = null;
+let wasDragging = false;
 paper.view.onMouseDown = (event) => {
   let hit = paper.project.hitTest(event.point);
   if (!hit)
     return;
-  selectedItemId = Object.keys(viewState)[Object.values(viewState).indexOf(hit.item)]
+  selectedItemId = getItemId(hit.item);
 }
 paper.view.onMouseMove = (event) => {
   if (!selectedItemId)
     return;
   let item = viewState[selectedItemId];
   let { x, y } = item.position.add(event.delta);
-  homeworldsState.set(selectedItemId, _.extend(homeworldsState.state[selectedItemId], { x, y }));
+  homeworldsState.update(selectedItemId, { x, y });
+  wasDragging = true;
   render();
 }
 paper.view.onMouseUp = (event) => {
   selectedItemId = null;
+
+  if (wasDragging) {
+    // This was the end of a drag. Clear the wasDragging state and return.
+    wasDragging = false;
+    return;
+  }
+
+  // This was a click. Cycle to the next piece type.
+  let hit = paper.project.hitTest(event.point);
+  if (!hit)
+    return;
+  let itemId = getItemId(hit.item);
+  let { type } = homeworldsState.get(itemId);
+  homeworldsState.update(itemId, { type: nextType(type) });
+  render();
 }
 
 // Create a triangle shaped path 
