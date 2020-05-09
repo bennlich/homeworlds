@@ -36,6 +36,13 @@ class SharedState {
   emitRemove(key) {
     this.removeCallbacks.forEach((fn) => fn(key));
   }
+  getKey(value) {
+    for (let key in this.state) {
+      if (this.state[key] === value) {
+        return key;
+      }
+    }
+  }
   get(key) {
     return this.state[key];
   }
@@ -54,6 +61,8 @@ class SharedState {
   delete(key) {
     delete this.state[key];
     this.socket.send(JSON.stringify({ type: 'delete', key }));
+    // Should this emit an event? Or are events only for remote changes?
+    this.emitRemove(key);
   }
 }
 

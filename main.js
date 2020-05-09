@@ -9,10 +9,17 @@ homeworldsState.onRemove((key) => {
   render();
 });
 
+// TODO: Should this be a part of SharedState? Why is it so hard to work with objects? Arrays?
+let nextKey = () => {
+  if (Object.keys(homeworldsState.state).length === 0)
+    return 1;
+  return _.max(Object.keys(homeworldsState.state).map((v) => parseInt(v))) + 1;
+};
+
 // references to paper.js objects keyed by global id
 let viewState = {};
-let getItemId = (item) => {
-  return Object.keys(viewState)[Object.values(viewState).indexOf(item)]
+let getItemId = (paperItem) => {
+  return Object.keys(viewState)[Object.values(viewState).indexOf(paperItem)]
 };
 let pieceTypes = () => {
   return [
@@ -22,24 +29,45 @@ let pieceTypes = () => {
 let nextType = (type) => {
   let types = pieceTypes();
   return types[(types.indexOf(type) + 1) % 3];
-}
+};
 
-function addSet() {
+function addPyramidsSet() {
   let sizes = ['small', 'medium', 'large'];
   let colors = ['red', 'green', 'blue', 'yellow'];
-  let nextId = Object.keys(homeworldsState.state).length > 0 ? _.max(Object.keys(homeworldsState.state).map((v) => parseInt(v))) + 1 : 1;
-  console.log(nextId);
   for (let size of sizes) {
     for (let color of colors) {
-      homeworldsState.set(nextId, {
+      homeworldsState.set(nextKey(), {
         size,
         color,
         type: 'supply',
         x: Math.random()*paper.view.viewSize.width,
         y: Math.random()*paper.view.viewSize.height
       });
-      nextId += 1;
     }
+  }
+  render();
+}
+
+function getPlayerKeys() {
+  return Object.values(homeworldsState.state)
+    .filter((item) => item.type === 'player')
+    .map((item) => homeworldsState.getKey(item));
+}
+
+function addPlayerCircle() {
+  homeworldsState.set(nextKey(), {
+    type: 'player',
+    x: Math.random()*paper.view.viewSize.width,
+    y: Math.random()*paper.view.viewSize.height
+  });
+  render();
+}
+
+function removePlayerCircle() {
+  let playerKeys = getPlayerKeys();
+  console.log(playerKeys);
+  if (playerKeys.length > 0) {
+    homeworldsState.delete(playerKeys[0]);
   }
   render();
 }
@@ -94,6 +122,14 @@ function getShape(newState) {
       fillColor: newState.color
     });
     shape.rotate(45);
+  }
+  if (newState.type === 'player') {
+    console.log('making a player');
+    shape = new paper.Path.Circle({
+      center: new paper.Point(0, 0),
+      fillColor: 'orange',
+      radius: 20
+    });
   }
   shape.position.x = newState.x;
   shape.position.y = newState.y;
@@ -167,4 +203,6 @@ paper.view.onMouseUp = (event) => {
 // }
 
 window.clearState = clearState;
-window.addSet = addSet;
+window.addPyramidsSet = addPyramidsSet;
+window.addPlayerCircle = addPlayerCircle;
+window.removePlayerCircle = removePlayerCircle;
