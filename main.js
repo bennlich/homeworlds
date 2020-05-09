@@ -21,14 +21,15 @@ let viewState = {};
 let getItemId = (paperItem) => {
   return Object.keys(viewState)[Object.values(viewState).indexOf(paperItem)]
 };
-let pieceTypes = () => {
-  return [
-    'supply', 'star', 'ship'
-  ];
-};
-let nextType = (type) => {
-  let types = pieceTypes();
-  return types[(types.indexOf(type) + 1) % 3];
+let nextType = (item) => {
+  let numPlayers = getPlayerKeys().length;
+  if (item.type === 'supply')
+    return { type: 'star' };
+  if (item.type === 'star' && numPlayers > 0)
+    return { type: 'ship', playerKey: 0 };
+  if (item.type === 'ship' && item.playerKey < (numPlayers - 1))
+    return { type: 'ship', playerKey: item.playerKey + 1 };
+  return { type: 'supply' };
 };
 
 function addPyramidsSet() {
@@ -115,16 +116,18 @@ function getShape(newState) {
     });
   }
   if (newState.type === 'ship') {
-    shape = new paper.Path.RegularPolygon({
-      center: new paper.Point(0, 0),
-      sides: 3,
-      radius: getRadius(newState.size),
+    let size = getRadius(newState.size);
+    shape = new paper.Path({
+      segments: [[-size/2, 0], [size/2, 0], [0, 1.5*size]],
       fillColor: newState.color
     });
-    shape.rotate(45);
+    let player = homeworldsState.get(getPlayerKeys()[newState.playerKey]);
+    if (player) {
+      let angle = new paper.Point(player.x, player.y).subtract(paper.view.center).angle;
+      shape.rotate(90 + angle);
+    }
   }
   if (newState.type === 'player') {
-    console.log('making a player');
     shape = new paper.Path.Circle({
       center: new paper.Point(0, 0),
       fillColor: 'orange',
@@ -170,37 +173,10 @@ paper.view.onMouseUp = (event) => {
   if (!hit)
     return;
   let itemId = getItemId(hit.item);
-  let { type } = homeworldsState.get(itemId);
-  homeworldsState.update(itemId, { type: nextType(type) });
+  let item = homeworldsState.get(itemId);
+  homeworldsState.update(itemId, nextType(item));
   render();
 }
-
-// Create a triangle shaped path 
-// var triangle = new paper.Path.RegularPolygon({
-//   center: new paper.Point(80, 70),
-//   sides: 3,
-//   radius: 50
-// });
-// triangle.fillColor = '#e9e9ff';
-
-// triangle.onMouseDrag = function(event) {
-//   triangle.position = triangle.position.add(event.delta);
-//   homeworldsState.set(triangle.id, { x: triangle.position.x, y: triangle.position.y });
-//   paper.view.draw();
-// }
-
-// var tool = new paper.Tool();
-// var path;
-
-// tool.onMouseDown = function(event) {
-//   path = new paper.Path();
-//   path.strokeColor = 'black';
-//   path.add(event.point);
-// }
-
-// tool.onMouseDrag = function(event) {
-//   path.add(event.point);
-// }
 
 window.clearState = clearState;
 window.addPyramidsSet = addPyramidsSet;
