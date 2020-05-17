@@ -175,8 +175,10 @@ paper.view.onMouseUp = (event) => {
     return;
   let itemId = getItemId(hit.item);
   let item = homeworldsState.get(itemId);
-  homeworldsState.update(itemId, nextType(item));
-  render();
+  if (item.type !== 'player') {
+    homeworldsState.update(itemId, nextType(item));
+    render();
+  }
 }
 
 window.clearState = clearState;
