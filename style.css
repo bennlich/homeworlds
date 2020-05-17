@@ -5,16 +5,36 @@ html, body {
   color: white;
 }
 
+.canvas-container {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+}
+
 canvas[resize] {
   width: 100%;
   height: 100%;
 }
 
-.main-container {
+.overlay-container {
   position: absolute;
   top: 0px;
-  right: 0px;
   left: 0px;
+  pointer-events: none;
+}
+
+.buttons {
+  padding: 10px;
+  height: 50px;
+  display: flex;
+  box-sizing: border-box;
+}
+
+.buttons button {
+  margin-right: 5px;
+  pointer-events: all;
 }
 
 .debug-state {
