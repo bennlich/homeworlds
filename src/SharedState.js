@@ -1,10 +1,17 @@
 class SharedState {
-  constructor({ serverUrl }) {
+  constructor({ serverUrl=null, socket=null }) {
     this.state = {};
     this.changeCallbacks = [];
     this.removeCallbacks = [];
 
-    this.socket = new WebSocket(serverUrl);
+    // You can pass in either a url or a websocket
+    if (socket) {
+      this.socket = socket;
+    } else if (serverUrl) {
+      this.socket = new WebSocket(serverUrl);
+    } else {
+      console.error('SharedState requires either a serverUrl or a websocket instance');
+    }
     this.socket.onopen = () => {
       console.log('socket open');
     };
@@ -22,6 +29,9 @@ class SharedState {
         delete this.state[data.key];
         this.emitRemove(data.key);
       }
+    };
+    this.socket.onclose = (e) => {
+      console.log('socket closed');
     };
   }
   onChange(fn) {

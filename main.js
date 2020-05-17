@@ -1,7 +1,8 @@
 import { SharedState } from './src/SharedState.js';
 import config from './config.js';
 
-let homeworldsState = new SharedState({ serverUrl: config.socketUrl });
+let debug = false;
+let homeworldsState = new SharedState({ socket: new ReconnectingWebSocket(config.socketUrl, null, { debug }) });
 homeworldsState.onChange(render);
 homeworldsState.onRemove((key) => {
   viewState[key].remove();
